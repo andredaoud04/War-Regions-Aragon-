@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ARGON WARFRONT — Tactical Hex Strategy</title>
+<style>
+  :root {
+    --bg-dark: #09131c;
+    --panel-bg: rgba(14, 25, 38, 0.92);
+    --border-glow: rgba(56, 189, 248, 0.35);
+    --blue-fac: #2563eb;
+    --blue-light: #60a5fa;
+    --red-fac: #dc2626;
+    --red-light: #f87171;
+    --amber-fac: #d97706;
+    --amber-light: #fbbf24;
+    --neutral-fac: #64748b;
+    --gold: #facc15;
+    --text-main: #f1f5f9;
+  }
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: var(--bg-dark);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    color: var(--text-main);
+    touch-action: none;
+  }
+  #game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+  canvas:active {
+    cursor: grabbing;
+  }
+  /* HUD Overlays */
+  .hud-bar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .hud-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    backdrop-filter: blur(8px);
+    padding: 8px 14px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    pointer-events: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.45);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .power-bar-wrap {
+    flex: 1;
+    max-width: 260px;
+    height: 14px;
+    background: #1e293b;
+    border-radius: 7px;
+    overflow: hidden;
+    display: flex;
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  }
+  .pb-seg {
+    height: 100%;
+    transition: width 0.25s ease;
+  }
+  .btn-hud {
+    background: linear-gradient(180deg, #1e293b, #0f172a);
+    color: #e2e8f0;
+    border: 1px solid rgba(148,163,184,0.35);
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: transform 0.1s, border-color 0.15s;
+    pointer-events: auto;
+  }
+  .btn-hud:hover {
+    border-color: #38bdf8;
+  }
+  .btn-hud:active {
+    transform: scale(0.95);
+  }
+  /* Bottom Tactical Bar */
+  .bottom-hud {
+    position: absolute;
+    bottom: 14px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .inspector-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-glow);
+    border-radius: 12px;
+    padding: 10px 14px;
+    max-width: 310px;
+    pointer-events: auto;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .inspector-title {
+    font-weight: 800;
+    font-size: 13px;
+    color: #38bdf8;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .cam-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: auto;
+  }
+  /* Modal Menus */
+  .modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(6, 12, 20, 0.85);
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+    z-index: 30;
+  }
+  .hidden {
+    display: none !important;
+  }
+  .menu-box {
+    background: linear-gradient(165deg, #111e2e 0%, #0a121c 100%);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 22px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.75);
+  }
+  .brand-header {
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .brand-title {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand-sub {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .top-stats-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.8);
+    padding: 10px 14px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .gold-pill {
+    color: var(--gold);
+    font-weight: 800;
+    font-size: 15px;
+  }
+  .diff-select {
+    display: flex;
+    gap: 4px;
+  }
+  .diff-btn {
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: #1e293b;
+    color: #94a3b8;
+    cursor: pointer;
+  }
+  .diff-btn.active {
+    background: #0284c7;
+    color: #fff;
+    border-color: #38bdf8;
+  }
+  .section-label {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    margin: 14px 0 8px;
+  }
+  .campaign-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .level-item {
+    background: rgba(30, 41, 59, 0.7);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .level-item.unlocked:hover {
+    border-color: #38bdf8;
+    background: rgba(30, 41, 59, 0.95);
+  }
+  .level-item.locked {
+    opacity: 0.45;
+  }
+  .lvl-info h4 {
+    font-size: 14px;
+    font-weight: 800;
+    color: #f8fafc;
+  }
+  .lvl-info p {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+  .stars-row {
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+  .btn-primary {
+    background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+    color: white;
+    border: 1px solid #60a5fa;
+    padding: 8px 16px;
+    border-radius: 9px;
+    font-weight: 800;
+    font-size: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  }
+  .btn-primary:active {
+    transform: scale(0.96);
+  }
+  .upg-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .upg-card {
+    background: rgba(30, 41, 59, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .upg-card h5 {
+    font-size: 12px;
+    color: #e2e8f0;
+  }
+  .upg-card p {
+    font-size: 11px;
+    color: #38bdf8;
+    font-weight: 700;
+  }
+  .btn-upg {
+    background: #0f172a;
+    border: 1px solid #eab308;
+    color: #fde047;
+    padding: 6px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .btn-upg:disabled {
+    border-color: #334155;
+    color: #64748b;
+    cursor: not-allowed;
+  }
+  @media (max-width: 480px) {
+    .hud-card { padding: 6px 10px; font-size: 11px; }
+    .upg-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <canvas id="battle-canvas"></canvas>
+
+  <!-- Top Tactical HUD -->
+  <div id="top-hud" class="hud-bar hidden">
+    <div class="hud-card">
+      <span id="hud-level-name">SECTOR 1</span>
+      <span style="color:#94a3b8">|</span>
+      <span id="hud-timer" style="color:#38bdf8">00:00</span>
+    </div>
+
+    <div class="power-bar-wrap" title="Territory & Troop Balance">
+      <div id="pb-player" class="pb-seg" style="background:#3b82f6; width:50%"></div>
+      <div id="pb-enemy2" class="pb-seg" style="background:#f59e0b; width:0%"></div>
+      <div id="pb-enemy1" class="pb-seg" style="background:#ef4444; width:50%"></div>
+    </div>
+
+    <div style="display:flex; gap:6px; pointer-events:auto;">
+      <button class="btn-hud" id="btn-speed" title="Toggle Game Speed">1x</button>
+      <button class="btn-hud" id="btn-restart" title="Restart Sector">↻</button>
+      <button class="btn-hud" id="btn-menu" title="Command HQ">HQ</button>
+    </div>
+  </div>
+
+  <!-- Bottom Inspector & Camera Controls -->
+  <div id="bottom-hud" class="bottom-hud hidden">
+    <div class="inspector-card" id="inspector-box">
+      <div class="inspector-title">
+        <span id="insp-title">TACTICAL DATALINK</span>
+        <span id="insp-sub" style="color:#facc15">READY</span>
+      </div>
+      <div id="insp-body" style="color:#cbd5e1">
+        Drag from any <b>Blue Base</b> to a target base to deploy troops. Tap a base to inspect unit class & terrain routes.
+      </div>
+    </div>
+
+    <div class="cam-controls">
+      <button class="btn-hud" id="btn-zoom-in">＋</button>
+      <button class="btn-hud" id="btn-zoom-reset">⌖</button>
+      <button class="btn-hud" id="btn-zoom-out">－</button>
+    </div>
+  </div>
+
+  <!-- Main Campaign & Upgrades Modal -->
+  <div id="menu-modal" class="modal-overlay">
+    <div class="menu-box">
+      <div class="brand-header">
+        <div class="brand-title">ARGON WARFRONT</div>
+        <div class="brand-sub">Autonomous Hexagonal Tactical Command</div>
+      </div>
+
+      <div class="top-stats-row">
+        <div>
+          <span style="font-size:11px; color:#94a3b8; display:block;">WAR CHEST</span>
+          <span class="gold-pill">★ <span id="menu-gold">0</span> CREDITS</span>
+        </div>
+        <div>
+          <span style="font-size:11px; color:#94a3b8; display:block; margin-bottom:3px;">AI DOCTRINE</span>
+          <div class="diff-select">
+            <button class="diff-btn" data-diff="0">CADET</button>
+            <button class="diff-btn active" data-diff="1">VETERAN</button>
+            <button class="diff-btn" data-diff="2">ARGON</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Campaign Sectors</div>
+      <div id="campaign-list" class="campaign-list"></div>
+
+      <div class="section-label">Permanent Command Upgrades</div>
+      <div id="upgrade-grid" class="upg-grid"></div>
+
+      <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#64748b;">
+        <span>Controls: Drag Base → Base | Pinch/Wheel Zoom</span>
+        <button class="btn-hud" id="btn-reset-save" style="font-size:10px; padding:4px 8px;">Reset Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- End of Battle Modal -->
+  <div id="result-modal" class="modal-overlay hidden">
+    <div class="menu-box" style="max-width:380px; text-align:center;">
+      <h2 id="res-title" style="font-size:28px; font-weight:900; margin-bottom:6px;">VICTORY</h2>
+      <p id="res-subtitle" style="font-size:13px; color:#94a3b8; margin-bottom:14px;">Sector Secured</p>
+      <div id="res-stars" style="font-size:32px; color:#facc15; margin-bottom:14px;">★★★</div>
+      <div id="res-stats" style="background:rgba(15,23,42,0.8); padding:12px; border-radius:10px; font-size:12px; color:#cbd5e1; margin-bottom:18px; line-height:1.7;"></div>
+      <div style="display:flex; gap:10px; justify-content:center;">
+        <button class="btn-hud" id="btn-res-retry" style="padding:10px 18px;">Replay</button>
+        <button class="btn-primary" id="btn-res-hq" style="padding:10px 22px;">Command HQ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/**
+ * ARGON WARFRONT — COMPLETE HEXAGONAL REAL-TIME STRATEGY ENGINE
+ * Autonomous Architecture: Axial Hex Math, Domain-Aware A* Pathfinding,
+ * Multi-Class Combat & Interception, Utility AI, Procedural Audio & Canvas Renderer.
+ */
+
+// ==================== 1. SOUND SYNTHESIZER (WEB AUDIO API) ====================
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+  play(type) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    if (type === 'deploy') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.11);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 'hit') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(55, now + 0.08);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } else if (type === 'capture') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(380, now);
+      osc.frequency.exponentialRampToValueAtTime(760, now + 0.22);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.24);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } else if (type === 'error') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.setValueAtTime(110, now + 0.06);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.14);
+      osc.start(now);
+      osc.stop(now + 0.14);
+    }
+  }
+}
+const sfx = new SoundFX();
+
+// ==================== 2. CONSTANTS, FACTIONS, TERRAIN & UNIT CLASSES ====================
+const FACTIONS = {
+  NEUTRAL: { id: 0, name: 'Neutral Garrison', color: '#64748b', light: '#94a3b8', dark: '#334155' },
+  PLAYER:  { id: 1, name: 'Argon Vanguard',   color: '#2563eb', light: '#60a5fa', dark: '#1e3a8a' },
+  ENEMY1:  { id: 2, name: 'Crimson Directorate', color: '#dc2626', light: '#f87171', dark: '#7f1d1d' },
+  ENEMY2:  { id: 3, name: 'Solaris Syndicate', color: '#d97706', light: '#fbbf24', dark: '#78350f' }
+};
+
+const TERRAIN = {
+  WATER:    { id: 0, name: 'Deep Water',    top: '#0f2942', side: '#081829', def: 1.0, landCost: Infinity, navalCost: 1.0, airCost: 1.0 },
+  PLAINS:   { id: 1, name: 'Open Plains',   top: '#3f7d4c', side: '#295733', def: 1.0, landCost: 1.0,      navalCost: Infinity, airCost: 1.0 },
+  FOREST:   { id: 2, name: 'Tactical Woods',top: '#28593a', side: '#193b25', def: 1.25,landCost: 1.45,     navalCost: Infinity, airCost: 1.0 },
+  SAND:     { id: 3, name: 'Coastal Shoal', top: '#c2a869', side: '#8f7943', def: 0.95,landCost: 1.15,     navalCost: Infinity, airCost: 1.0 },
+  MOUNTAIN: { id: 4, name: 'Jagged Peak',   top: '#57606f', side: '#373e48', def: 1.5, landCost: Infinity, navalCost: Infinity, airCost: 1.25 },
+  BRIDGE:   { id: 5, name: 'Armored Bridge',top: '#8c6d46', side: '#5c4528', def: 0.9, landCost: 1.0,      navalCost: 1.2,      airCost: 1.0 },
+  REEF:     { id: 6, name: 'Naval Bastion', top: '#1b4965', side: '#0f2c3f', def: 1.2, landCost: Infinity, navalCost: 1.0,      airCost: 1.0 }
+};
+
+const UNIT_CLASSES = {
+  INFANTRY: {
+    id: 'INFANTRY', name: 'Shock Infantry', domain: 'LAND',
+    prodRate: 1.15, cap: 55, speed: 1.85, atk: 1.0, hp: 1.0, fireRange: 0,
+    desc: 'Fast production & capture. Crosses land & bridges. Bonus vs Helis.'
+  },
+  TANK: {
+    id: 'TANK', name: 'Heavy Armor', domain: 'LAND',
+    prodRate: 0.72, cap: 45, speed: 1.45, atk: 1.65, hp: 1.75, fireRange: 0,
+    desc: 'Armored spearhead. Crushes Infantry & Artillery. Land & bridge routes.'
+  },
+  ARTILLERY: {
+    id: 'ARTILLERY', name: 'Rocket Artillery', domain: 'LAND',
+    prodRate: 0.58, cap: 40, speed: 1.15, atk: 1.45, hp: 1.1, fireRange: 2.8,
+    desc: 'Long-range bombardment support. Shells approaching enemies in flight.'
+  },
+  HELI: {
+    id: 'HELI', name: 'Strike Gunship', domain: 'AIR',
+    prodRate: 0.52, cap: 35, speed: 2.55, atk: 1.35, hp: 1.15, fireRange: 1.6,
+    desc: 'Ignores water & terrain obstacles. Rapid strike. Counters Tanks.'
+  },
+  GUNBOAT: {
+    id: 'GUNBOAT', name: 'Missile Corvette', domain: 'NAVAL',
+    prodRate: 0.65, cap: 45, speed: 1.75, atk: 1.55, hp: 1.6, fireRange: 2.5,
+    desc: 'Navigates water & coastal bases. Controls bridges with ranged salvos.'
+  }
+};
+
+// Class Advantage Matrix: Attacker -> Defender multiplier
+const CLASS_COUNTER = {
+  INFANTRY:  { INFANTRY: 1.0, TANK: 0.68, ARTILLERY: 1.15, HELI: 1.35, GUNBOAT: 0.75 },
+  TANK:      { INFANTRY: 1.55, TANK: 1.0, ARTILLERY: 1.65, HELI: 0.65, GUNBOAT: 0.85 },
+  ARTILLERY: { INFANTRY: 1.35, TANK: 1.15, ARTILLERY: 1.0, HELI: 0.75, GUNBOAT: 1.35 },
+  HELI:      { INFANTRY: 0.85, TANK: 1.65, ARTILLERY: 1.45, HELI: 1.0, GUNBOAT: 1.25 },
+  GUNBOAT:   { INFANTRY: 1.35, TANK: 1.25, ARTILLERY: 1.15, HELI: 1.15, GUNBOAT: 1.0 }
+};
+
+const UPGRADE_DEFS = [
+  { key: 'prod',  name: 'War Factory Logistics', desc: '+8% Troop Production Rate', baseCost: 100 },
+  { key: 'speed', name: 'Turbine Thrusters',     desc: '+8% Convoy Movement Speed', baseCost: 100 },
+  { key: 'atk',   name: 'Depleted Uranium Ammo', desc: '+8% Combat Attack & Defense', baseCost: 120 },
+  { key: 'start', name: 'Forward Deployment',    desc: '+4 Starting Garrison Troops', baseCost: 140 }
+];
+
+// ==================== 3. HEXAGONAL AXIAL MATH & A* PATHFINDING ====================
+const HEX_DIRS = [
+  { q: 1, r: 0 }, { q: 1, r: -1 }, { q: 0, r: -1 },
+  { q: -1, r: 0 }, { q: -1, r: 1 }, { q: 0, r: 1 }
+];
+
+function hexKey(q, r) { return `${q},${r}`; }
+
+function hexDist(q1, r1, q2, r2) {
+  return (Math.abs(q1 - q2) + Math.abs(q1 + r1 - q2 - r2) + Math.abs(r1 - r2)) / 2;
+}
+
+function axialToWorld(q, r, size = 34) {
+  const x = size * Math.sqrt(3) * (q + r / 2);
+  const y = size * (3 / 2) * r * 0.86; // Slight isometric tilt for 2.5D depth
+  return { x, y };
+}
+
+// Domain-specific tile traversal cost
+function getTileTraversalCost(tile, domain, isEndpoint) {
+  if (!tile) return Infinity;
+  const t = tile.terrain;
+  if (domain === 'AIR') return t.airCost;
+  if (domain === 'LAND') return t.landCost;
+  if (domain === 'NAVAL') {
+    if (t.navalCost < Infinity) return t.navalCost;
+    // Naval units can dock at coastal land bases if they are the origin or destination
+    if (isEndpoint && tile.hasCoastalAccess) return 1.2;
+    return Infinity;
+  }
+  return Infinity;
+}
+
+function findHexPath(grid, startQ, startR, endQ, endR, unitClassId) {
+  const uClass = UNIT_CLASSES[unitClassId];
+  const domain = uClass.domain;
+  const startK = hexKey(startQ, startR);
+  const endK = hexKey(endQ, endR);
+  if (startK === endK) return null;
+
+  const open = [{ q: startQ, r: startR, k: startK, g: 0, f: hexDist(startQ, startR, endQ, endR) }];
+  const gScore = new Map([[startK, 0]]);
+  const cameFrom = new Map();
+  const closed = new Set();
+
+  while (open.length > 0) {
+    open.sort((a, b) => a.f - b.f);
+    const cur = open.shift();
+    if (cur.k === endK) {
+      const path = [];
+      let currK = endK;
+      while (currK) {
+        const node = grid.get(currK);
+        path.unshift({ q: node.q, r: node.r, x: node.x, y: node.y, terrain: node.terrain });
+        currK = cameFrom.get(currK);
+      }
+      return path;
+    }
+    closed.add(cur.k);
+
+    for (const d of HEX_DIRS) {
+      const nq = cur.q + d.q;
+      const nr = cur.r + d.r;
+      const nk = hexKey(nq, nr);
+      if (closed.has(nk)) continue;
+      const neighbor = grid.get(nk);
+      if (!neighbor) continue;
+
+      const isEnd = (nk === endK);
+      const stepCost = getTileTraversalCost(neighbor, domain, isEnd);
+      if (stepCost === Infinity) continue;
+
+      const tentativeG = cur.g + stepCost;
+      if (tentativeG < (gScore.get(nk) ?? Infinity)) {
+        cameFrom.set(nk, cur.k);
+        gScore.set(nk, tentativeG);
+        open.push({ q: nq, r: nr, k: nk, g: tentativeG, f: tentativeG + hexDist(nq, nr, endQ, endR) });
+      }
+    }
+  }
+  return null; // Unreachable for this unit class
+}
+
+// ==================== 4. CAMPAIGN SECTOR DEFINITIONS ====================
+const CAMPAIGN_LEVELS = [
+  {
+    id: 1,
+    name: '1. Twin Straits',
+    subtitle: 'Bridge Chokepoints & Armor Support',
+    radius: 5,
+    builder: (setTile, addBase) => {
+      // Two main islands connected by two bridges
+      for (let r = -4; r <= 4; r++) {
+        for (let q = -4; q <= 4; q++) {
+          if (hexDist(0, 0, q, r) > 4) continue;
+          if (r <= -2) setTile(q, r, 'PLAINS');
+          else if (r >= 2) setTile(q, r, 'PLAINS');
+          else if (r === 0 && Math.abs(q) <= 1) setTile(q, r, 'PLAINS');
+        }
+      }
+      setTile(-2, -1, 'BRIDGE'); setTile(-2, 0, 'BRIDGE'); setTile(-2, 1, 'BRIDGE');
+      setTile(2, -1, 'BRIDGE');  setTile(2, 0, 'BRIDGE');  setTile(2, 1, 'BRIDGE');
+      setTile(0, -3, 'FOREST');  setTile(0, 3, 'FOREST');
+
+      addBase(-1, 3, 'PLAYER', 'INFANTRY', 22);
+      addBase(2, 2, 'PLAYER', 'TANK', 12);
+      addBase(-2, 2, 'NEUTRAL', 'INFANTRY', 10);
+      addBase(0, 0, 'NEUTRAL', 'ARTILLERY', 14);
+      addBase(2, -2, 'NEUTRAL', 'INFANTRY', 10);
+      addBase(1, -3, 'ENEMY1', 'INFANTRY', 20);
+      addBase(-2, -2, 'ENEMY1', 'TANK', 12);
+    }
+  },
+  {
+    id: 2,
+    name: '2. Iron Peninsula',
+    subtitle: 'Artillery Firebases & Flank Routes',
+    radius: 5,
+    builder: (setTile, addBase) => {
+      for (let r = -5; r <= 5; r++) {
+        for (let q = -5; q <= 5; q++) {
+          if (hexDist(0, 0, q, r) > 5) continue;
+          if (Math.abs(q + r * 0.5) < 3.2 && Math.abs(r) <= 4) {
+            setTile(q, r, (Math.abs(q) === 2 && r === 0) ? 'FOREST' : 'PLAINS');
+          }
+        }
+      }
+      // Central river split with 2 bridges
+      for (let q = -4; q <= 4; q++) setTile(q, 0, 'WATER');
+      setTile(-2, 0, 'BRIDGE');
+      setTile(2, 0, 'BRIDGE');
+      setTile(0, -1, 'SAND'); setTile(0, 1, 'SAND');
+      setTile(0, -2, 'MOUNTAIN'); setTile(0, 2, 'MOUNTAIN');
+
+      addBase(-1, 4, 'PLAYER', 'INFANTRY', 24);
+      addBase(1, 3, 'PLAYER', 'ARTILLERY', 14);
+      addBase(-2, 2, 'NEUTRAL', 'TANK', 12);
+      addBase(2, 1, 'NEUTRAL', 'INFANTRY', 10);
+      addBase(-2, -1, 'NEUTRAL', 'INFANTRY', 10);
+      addBase(2, -2, 'NEUTRAL', 'TANK', 12);
+      addBase(1, -4, 'ENEMY1', 'INFANTRY', 24);
+      addBase(-1, -3, 'ENEMY1', 'ARTILLERY', 15);
+    }
+  },
+  {
+    id: 3,
+    name: '3. Skyfall Atoll',
+    subtitle: 'Airborne Gunships & Disconnected Islands',
+    radius: 5,
+    builder: (setTile, addBase) => {
+      // Four separate islands: West & East connected by bridges, Center & North-East isolated for Helis!
+      const islands = [
+        { cq: -2, cr: 3, rad: 1.5, ter: 'PLAINS' },
+        { cq: 2, cr: -3, rad: 1.5, ter: 'PLAINS' },
+        { cq: 0, cr: 0,  rad: 1.3, ter: 'FOREST' },
+        { cq: -3, cr: -1, rad: 1.2, ter: 'SAND' },
+        { cq: 3, cr: 1,  rad: 1.2, ter: 'SAND' }
+      ];
+      for (let r = -5; r <= 5; r++) {
+        for (let q = -5; q <= 5; q++) {
+          if (hexDist(0, 0, q, r) > 5) continue;
+          for (const isl of islands) {
+            if (hexDist(isl.cq, isl.cr, q, r) <= isl.rad) setTile(q, r, isl.ter);
+          }
+        }
+      }
+      // Bridges linking outer ring, leaving (0,0) air-only or bridge-linked on one side
+      setTile(-3, 1, 'BRIDGE'); setTile(-2, 1, 'BRIDGE');
+      setTile(2, -1, 'BRIDGE'); setTile(3, -1, 'BRIDGE');
+      setTile(-1, -1, 'BRIDGE'); setTile(1, 1, 'BRIDGE');
+
+      addBase(-2, 3, 'PLAYER', 'HELI', 18);
+      addBase(-1, 3, 'PLAYER', 'INFANTRY', 20);
+      addBase(-3, -1, 'NEUTRAL', 'TANK', 12);
+      addBase(0, 0, 'NEUTRAL', 'HELI', 14);
+      addBase(3, 1, 'NEUTRAL', 'TANK', 12);
+      addBase(2, -3, 'ENEMY1', 'HELI', 18);
+      addBase(1, -3, 'ENEMY1', 'INFANTRY', 22);
+    }
+  },
+  {
+    id: 4,
+    name: '4. Shattered Trident',
+    subtitle: '3-Faction Warfront + Naval Corvettes',
+    radius: 5,
+    builder: (setTile, addBase) => {
+      // Three outer faction fortresses + naval water lanes + central island
+      const hubs = [
+        { cq: 0, cr: 4, rad: 1.4, ter: 'PLAINS' },
+        { cq: -4, cr: -1, rad: 1.4, ter: 'PLAINS' },
+        { cq: 4, cr: -3, rad: 1.4, ter: 'PLAINS' },
+        { cq: 0, cr: 0, rad: 1.5, ter: 'FOREST' }
+      ];
+      for (let r = -5; r <= 5; r++) {
+        for (let q = -5; q <= 5; q++) {
+          if (hexDist(0, 0, q, r) > 5) continue;
+          for (const h of hubs) {
+            if (hexDist(h.cq, h.cr, q, r) <= h.rad) setTile(q, r, h.ter);
+          }
+        }
+      }
+      setTile(0, 2, 'BRIDGE');
+      setTile(-2, 0, 'BRIDGE');
+      setTile(2, -1, 'BRIDGE');
+      setTile(-2, 2, 'REEF');
+      setTile(2, 1, 'REEF');
+
+      // Player South
+      addBase(0, 4, 'PLAYER', 'TANK', 20);
+      addBase(-1, 4, 'PLAYER', 'INFANTRY', 22);
+      // Enemy 1 NW
+      addBase(-4, -1, 'ENEMY1', 'TANK', 20);
+      addBase(-3, -2, 'ENEMY1', 'INFANTRY', 20);
+      // Enemy 2 NE
+      addBase(4, -3, 'ENEMY2', 'HELI', 16);
+      addBase(3, -3, 'ENEMY2', 'INFANTRY', 20);
+      // Neutrals
+      addBase(0, 0, 'NEUTRAL', 'ARTILLERY', 16);
+      addBase(-2, 2, 'NEUTRAL', 'GUNBOAT', 12);
+      addBase(2, 1, 'NEUTRAL', 'GUNBOAT', 12);
+    }
+  },
+  {
+    id: 5,
+    name: '5. Argon Citadel',
+    subtitle: 'Combined Arms Supreme Showdown',
+    radius: 6,
+    builder: (setTile, addBase) => {
+      for (let r = -5; r <= 5; r++) {
+        for (let q = -5; q <= 5; q++) {
+          if (hexDist(0, 0, q, r) > 5) continue;
+          const d = hexDist(0, 0, q, r);
+          if (d <= 1) setTile(q, r, 'PLAINS');
+          else if (d === 2) setTile(q, r, 'WATER');
+          else if (d >= 3 && Math.abs(q) <= 4) setTile(q, r, 'PLAINS');
+        }
+      }
+      setTile(-1, -1, 'MOUNTAIN'); setTile(1, 1, 'MOUNTAIN');
+      setTile(0, 2, 'BRIDGE');     setTile(0, -2, 'BRIDGE');
+      setTile(-2, 0, 'BRIDGE');    setTile(2, 0, 'BRIDGE');
+      setTile(-3, 3, 'REEF');      setTile(3, -3, 'REEF');
+      setTile(-2, 4, 'FOREST');    setTile(2, -4, 'FOREST');
+
+      // Player South Ring
+      addBase(0, 4, 'PLAYER', 'TANK', 22);
+      addBase(-2, 4, 'PLAYER', 'INFANTRY', 24);
+      addBase(2, 3, 'PLAYER', 'HELI', 14);
+
+      // Neutral Contested Ring & Citadel
+      addBase(0, 0, 'NEUTRAL', 'ARTILLERY', 22);
+      addBase(-3, 0, 'NEUTRAL', 'TANK', 14);
+      addBase(3, 0, 'NEUTRAL', 'TANK', 14);
+      addBase(-3, 3, 'NEUTRAL', 'GUNBOAT', 12);
+      addBase(3, -3, 'NEUTRAL', 'GUNBOAT', 12);
+
+      // Enemy North Ring
+      addBase(0, -4, 'ENEMY1', 'TANK', 26);
+      addBase(2, -4, 'ENEMY1', 'INFANTRY', 26);
+      addBase(-2, -3, 'ENEMY1', 'HELI', 18);
+      addBase(-4, -1, 'ENEMY2', 'ARTILLERY', 20);
+      addBase(4, 1, 'ENEMY2', 'INFANTRY', 22);
+    }
+  }
+];
+
+// ==================== 5. PERSISTENT SAVE MANAGER ====================
+const SAVE_KEY = 'ARGON_WARFRONT_SAVE_V1';
+class SaveSystem {
+  constructor() {
+    this.data = {
+      gold: 120,
+      unlockedLevel: 1,
+      difficulty: 1, // 0: Cadet, 1: Veteran, 2: Argon
+      stars: {},
+      upgrades: { prod: 0, speed: 0, atk: 0, start: 0 }
+    };
+    this.load();
+  }
+  load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        this.data = { ...this.data, ...parsed, upgrades: { ...this.data.upgrades, ...(parsed.upgrades || {}) } };
+      }
+    } catch (e) { /* fallback to default */ }
+  }
+  save() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this.data));
+    } catch (e) { /* ignore storage quota errors */ }
+  }
+  reset() {
+    localStorage.removeItem(SAVE_KEY);
+    this.data = {
+      gold: 120,
+      unlockedLevel: 1,
+      difficulty: 1,
+      stars: {},
+      upgrades: { prod: 0, speed: 0, atk: 0, start: 0 }
+    };
+    this.save();
+  }
+}
+
+// ==================== 6. CORE GAME ENGINE ====================
+class ArgonWarfrontGame {
+  constructor() {
+    this.canvas = document.getElementById('battle-canvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.saveSys = new SaveSystem();
+
+    this.grid = new Map();
+    this.bases = [];
+    this.convoys = [];
+    this.projectiles = [];
+    this.particles = [];
+    this.floatTexts = [];
+    this.waterRipples = [];
+
+    this.currentLevel = CAMPAIGN_LEVELS[0];
+    this.running = false;
+    this.gameSpeed = 1;
+    this.battleTime = 0;
+    this.aiTimer = 0;
+
+    // Camera & Input State
+    this.cam = { x: 0, y: 0, zoom: 1.0, targetZoom: 1.0 };
+    this.selectedBase = null;
+    this.dragSourceBase = null;
+    this.dragHoverBase = null;
+    this.dragWorldPos = { x: 0, y: 0 };
+    this.previewPath = null;
+    this.isPanning = false;
+    this.panStart = { x: 0, y: 0, camX: 0, camY: 0 };
+    this.pinchDist = 0;
+
+    this.initAmbientWater();
+    this.bindEvents();
+    this.resize();
+    this.renderMenuUI();
+
+    this.lastFrame = performance.now();
+    requestAnimationFrame((t) => this.loop(t));
+  }
+
+  initAmbientWater() {
+    for (let i = 0; i < 28; i++) {
+      this.waterRipples.push({
+        x: (Math.random() - 0.5) * 900,
+        y: (Math.random() - 0.5) * 900,
+        r: 10 + Math.random() * 25,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  // -------------------- LEVEL INITIALIZATION --------------------
+  loadLevel(levelDef) {
+    this.currentLevel = levelDef;
+    this.grid.clear();
+    this.bases = [];
+    this.convoys = [];
+    this.projectiles = [];
+    this.particles = [];
+    this.floatTexts = [];
+    this.battleTime = 0;
+    this.aiTimer = 0;
+    this.selectedBase = null;
+    this.dragSourceBase = null;
+    this.previewPath = null;
+
+    const R = levelDef.radius;
+    for (let r = -R; r <= R; r++) {
+      for (let q = -R; q <= R; q++) {
+        if (hexDist(0, 0, q, r) <= R) {
+          const pos = axialToWorld(q, r);
+          this.grid.set(hexKey(q, r), {
+            q, r, x: pos.x, y: pos.y,
+            terrain: TERRAIN.WATER,
+            base: null,
+            hasCoastalAccess: false,
+            decorSeed: Math.abs(Math.sin(q * 12.9898 + r * 78.233))
+          });
+        }
+      }
+    }
+
+    const setTile = (q, r, terrainKey) => {
+      const cell = this.grid.get(hexKey(q, r));
+      if (cell && TERRAIN[terrainKey]) cell.terrain = TERRAIN[terrainKey];
+    };
+
+    const addBase = (q, r, facKey, classKey, pop) => {
+      const cell = this.grid.get(hexKey(q, r));
+      if (!cell) return;
+      if (cell.terrain === TERRAIN.WATER && classKey !== 'GUNBOAT') {
+        cell.terrain = TERRAIN.PLAINS;
+      }
+      const faction = FACTIONS[facKey];
+      const uClass = UNIT_CLASSES[classKey];
+      const startBonus = (faction.id === FACTIONS.PLAYER.id) ? this.saveSys.data.upgrades.start * 4 : 0;
+
+      const base = {
+        id: this.bases.length + 1,
+        q, r, x: cell.x, y: cell.y,
+        faction,
+        uClass,
+        pop: pop + startBonus,
+        prodProgress: 0,
+        fireCooldown: 0,
+        pulse: 0,
+        hitFlash: 0
+      };
+      cell.base = base;
+      this.bases.push(base);
+    };
+
+    levelDef.builder(setTile, addBase);
+
+    // Compute coastal access for Naval docking
+    for (const cell of this.grid.values()) {
+      for (const d of HEX_DIRS) {
+        const nb = this.grid.get(hexKey(cell.q + d.q, cell.r + d.r));
+        if (nb && (nb.terrain === TERRAIN.WATER || nb.terrain === TERRAIN.REEF || nb.terrain === TERRAIN.BRIDGE)) {
+          cell.hasCoastalAccess = true;
+          break;
+        }
+      }
+    }
+
+    this.fitCamera();
+    document.getElementById('menu-modal').classList.add('hidden');
+    document.getElementById('result-modal').classList.add('hidden');
+    document.getElementById('top-hud').classList.remove('hidden');
+    document.getElementById('bottom-hud').classList.remove('hidden');
+    document.getElementById('hud-level-name').textContent = levelDef.name.toUpperCase();
+    this.updateInspector(null);
+    this.running = true;
+  }
+
+  fitCamera() {
+    this.cam.x = 0;
+    this.cam.y = 0;
+    const minDim = Math.min(this.canvas.width, this.canvas.height);
+    const idealZoom = Math.max(0.62, Math.min(1.35, minDim / 520));
+    this.cam.zoom = idealZoom;
+    this.cam.targetZoom = idealZoom;
+  }
+
+  // -------------------- UPGRADE MULTIPLIERS --------------------
+  getFactionModifiers(faction) {
+    if (faction.id === FACTIONS.PLAYER.id) {
+      const u = this.saveSys.data.upgrades;
+      return {
+        prod: 1 + u.prod * 0.08,
+        speed: 1 + u.speed * 0.08,
+        atk: 1 + u.atk * 0.08
+      };
+    }
+    // AI Difficulty Scaling
+    const diff = this.saveSys.data.difficulty;
+    const scales = [
+      { prod: 0.85, speed: 0.92, atk: 0.90 }, // Cadet
+      { prod: 1.02, speed: 1.00, atk: 1.00 }, // Veteran
+      { prod: 1.20, speed: 1.08, atk: 1.12 }  // Argon
+    ];
+    return scales[diff] || scales[1];
+  }
+
+  // -------------------- TROOP DEPLOYMENT --------------------
+  deployTroops(sourceBase, targetBase) {
+    if (!sourceBase || !targetBase || sourceBase === targetBase) return false;
+    const sendCount = Math.floor(sourceBase.pop);
+    if (sendCount < 1) return false;
+
+    const path = findHexPath(this.grid, sourceBase.q, sourceBase.r, targetBase.q, targetBase.r, sourceBase.uClass.id);
+    if (!path || path.length < 2) {
+      if (sourceBase.faction.id === FACTIONS.PLAYER.id) {
+        sfx.play('error');
+        this.spawnFloatText(targetBase.x, targetBase.y - 24, 'NO VALID ROUTE!', '#f87171');
+      }
+      return false;
+    }
+
+    // Deduct troops & continue production immediately
+    sourceBase.pop -= sendCount;
+    sourceBase.pulse = 1.0;
+    if (sourceBase.faction.id === FACTIONS.PLAYER.id) sfx.play('deploy');
+
+    const mods = this.getFactionModifiers(sourceBase.faction);
+    this.convoys.push({
+      id: Math.random(),
+      faction: sourceBase.faction,
+      uClass: sourceBase.uClass,
+      count: sendCount,
+      hpPerUnit: sourceBase.uClass.hp,
+      currentUnitHp: sourceBase.uClass.hp,
+      atkMod: mods.atk,
+      speedMod: mods.speed,
+      path,
+      segIndex: 0,
+      segProgress: 0,
+      x: sourceBase.x,
+      y: sourceBase.y,
+      angle: 0,
+      targetBase,
+      fireCooldown: 0.4
+    });
+    return true;
+  }
+
+  // -------------------- SIMULATION UPDATE --------------------
+  update(dt) {
+    if (!this.running) return;
+    const scaledDt = Math.min(dt, 0.05) * this.gameSpeed;
+    this.battleTime += scaledDt;
+
+    // Smooth camera zoom
+    this.cam.zoom += (this.cam.targetZoom - this.cam.zoom) * 0.18;
+
+    // 1. Update Bases (Troop Production & Ranged Defense Fire)
+    for (const b of this.bases) {
+      if (b.pulse > 0) b.pulse = Math.max(0, b.pulse - scaledDt * 3);
+      if (b.hitFlash > 0) b.hitFlash = Math.max(0, b.hitFlash - scaledDt * 4);
+
+      if (b.faction.id !== FACTIONS.NEUTRAL.id) {
+        const mods = this.getFactionModifiers(b.faction);
+        const cap = b.uClass.cap;
+        if (b.pop < cap) {
+          b.prodProgress += b.uClass.prodRate * mods.prod * scaledDt;
+          if (b.prodProgress >= 1) {
+            const gained = Math.floor(b.prodProgress);
+            b.pop = Math.min(cap, b.pop + gained);
+            b.prodProgress -= gained;
+          }
+        } else {
+          b.prodProgress = 0;
+        }
+
+        // Base ranged bombardment (Artillery / Gunboat / Heli bases)
+        if (b.uClass.fireRange > 0 && b.pop >= 3) {
+          b.fireCooldown -= scaledDt;
+          if (b.fireCooldown <= 0) {
+            const rangePx = b.uClass.fireRange * 62;
+            const targetConvoy = this.convoys.find(c =>
+              c.faction.id !== b.faction.id &&
+              Math.hypot(c.x - b.x, c.y - b.y) <= rangePx
+            );
+            if (targetConvoy) {
+              b.fireCooldown = 1.35;
+              this.fireProjectile(b.x, b.y - 10, targetConvoy, b.faction, b.uClass, 0.55);
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Update Convoys (Movement along Hex Path)
+    for (let i = this.convoys.length - 1; i >= 0; i--) {
+      const c = this.convoys[i];
+      if (c.count <= 0) {
+        this.convoys.splice(i, 1);
+        continue;
+      }
+
+      const curNode = c.path[c.segIndex];
+      const nextNode = c.path[c.segIndex + 1];
+      if (!nextNode) {
+        this.resolveBaseArrival(c, c.targetBase);
+        this.convoys.splice(i, 1);
+        continue;
+      }
+
+      const terrainCost = getTileTraversalCost(
+        { terrain: nextNode.terrain, hasCoastalAccess: true },
+        c.uClass.domain,
+        c.segIndex + 1 === c.path.length - 1
+      );
+      const speedHexPerSec = (c.uClass.speed * c.speedMod) / Math.max(0.8, terrainCost);
+      c.segProgress += speedHexPerSec * scaledDt;
+      c.angle = Math.atan2(nextNode.y - curNode.y, nextNode.x - curNode.x);
+
+      if (c.segProgress >= 1) {
+        c.segIndex++;
+        c.segProgress -= 1;
+        if (c.segIndex >= c.path.length - 1) {
+          this.resolveBaseArrival(c, c.targetBase);
+          this.convoys.splice(i, 1);
+          continue;
+        }
+      }
+
+      const nA = c.path[c.segIndex];
+      const nB = c.path[c.segIndex + 1];
+      c.x = nA.x + (nB.x - nA.x) * c.segProgress;
+      c.y = nA.y + (nB.y - nA.y) * c.segProgress;
+
+      // Ranged convoy fire while marching
+      if (c.uClass.fireRange > 0) {
+        c.fireCooldown -= scaledDt;
+        if (c.fireCooldown <= 0) {
+          const rangePx = c.uClass.fireRange * 56;
+          const enemyConvoy = this.convoys.find(other =>
+            other.faction.id !== c.faction.id &&
+            other.count > 0 &&
+            Math.hypot(other.x - c.x, other.y - c.y) <= rangePx
+          );
+          if (enemyConvoy) {
+            c.fireCooldown = 1.1;
+            this.fireProjectile(c.x, c.y, enemyConvoy, c.faction, c.uClass, Math.min(1.4, c.count * 0.08));
+          }
+        }
+      }
+    }
+
+    // 3. Mid-Route Convoy Interception & Skirmishes
+    for (let i = 0; i < this.convoys.length; i++) {
+      const cA = this.convoys[i];
+      if (cA.count <= 0) continue;
+      for (let j = i + 1; j < this.convoys.length; j++) {
+        const cB = this.convoys[j];
+        if (cB.count <= 0 || cA.faction.id === cB.faction.id) continue;
+
+        const dist = Math.hypot(cA.x - cB.x, cA.y - cB.y);
+        if (dist < 26) {
+          this.resolveMidAirOrFieldClash(cA, cB);
+        }
+      }
+    }
+
+    // 4. Update Projectiles
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      p.progress += p.speed * scaledDt;
+      if (p.progress >= 1) {
+        this.spawnParticles(p.tx, p.ty, p.color, 7);
+        if (p.target && p.target.count > 0) {
+          const counter = CLASS_COUNTER[p.uClass.id]?.[p.target.uClass.id] || 1.0;
+          const dmg = p.power * counter;
+          p.target.currentUnitHp -= dmg;
+          while (p.target.currentUnitHp <= 0 && p.target.count > 0) {
+            p.target.count--;
+            p.target.currentUnitHp += p.target.hpPerUnit;
+          }
+        }
+        this.projectiles.splice(i, 1);
+      }
+    }
+
+    // 5. Update Particles & Floating Feedback
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
+      pt.x += pt.vx * scaledDt;
+      pt.y += pt.vy * scaledDt;
+      pt.life -= scaledDt;
+      if (pt.life <= 0) this.particles.splice(i, 1);
+    }
+    for (let i = this.floatTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatTexts[i];
+      ft.y -= 22 * scaledDt;
+      ft.life -= scaledDt;
+      if (ft.life <= 0) this.floatTexts.splice(i, 1);
+    }
+
+    // 6. Enemy AI Strategic Evaluation
+    this.aiTimer += scaledDt;
+    const aiInterval = [1.8, 1.25, 0.85][this.saveSys.data.difficulty] || 1.25;
+    if (this.aiTimer >= aiInterval) {
+      this.aiTimer = 0;
+      this.runEnemyAI(FACTIONS.ENEMY1);
+      this.runEnemyAI(FACTIONS.ENEMY2);
+    }
+
+    this.updateHUD();
+    this.checkWinLossConditions();
+  }
+
+  // -------------------- COMBAT RESOLUTION --------------------
+  resolveMidAirOrFieldClash(cA, cB) {
+    const multAB = (CLASS_COUNTER[cA.uClass.id]?.[cB.uClass.id] || 1.0) * cA.atkMod;
+    const multBA = (CLASS_COUNTER[cB.uClass.id]?.[cA.uClass.id] || 1.0) * cB.atkMod;
+
+    const strA = cA.count * cA.uClass.atk * cA.uClass.hp * multAB;
+    const strB = cB.count * cB.uClass.atk * cB.uClass.hp * multBA;
+
+    const midX = (cA.x + cB.x) / 2;
+    const midY = (cA.y + cB.y) / 2;
+    this.spawnParticles(midX, midY, '#fbbf24', 14);
+    sfx.play('hit');
+
+    if (strA > strB) {
+      const ratioLeft = (strA - strB) / strA;
+      cA.count = Math.max(1, Math.round(cA.count * ratioLeft));
+      cB.count = 0;
+      this.spawnFloatText(midX, midY - 10, `${cA.uClass.name} Clash Win!`, cA.faction.light);
+    } else if (strB > strA) {
+      const ratioLeft = (strB - strA) / strB;
+      cB.count = Math.max(1, Math.round(cB.count * ratioLeft));
+      cA.count = 0;
+      this.spawnFloatText(midX, midY - 10, `${cB.uClass.name} Clash Win!`, cB.faction.light);
+    } else {
+      cA.count = 0;
+      cB.count = 0;
+    }
+  }
+
+  resolveBaseArrival(convoy, base) {
+    if (!base || convoy.count <= 0) return;
+
+    // Friendly Reinforcement
+    if (convoy.faction.id === base.faction.id) {
+      base.pop = Math.min(base.uClass.cap + 15, base.pop + convoy.count);
+      base.pulse = 1.0;
+      this.spawnParticles(base.x, base.y, convoy.faction.light, 10);
+      this.spawnFloatText(base.x, base.y - 26, `+${convoy.count}`, convoy.faction.light);
+      return;
+    }
+
+    // Hostile Attack on Base
+    const cell = this.grid.get(hexKey(base.q, base.r));
+    const terrainDef = cell ? cell.terrain.def : 1.0;
+    const defMods = this.getFactionModifiers(base.faction);
+    const classCounter = CLASS_COUNTER[convoy.uClass.id]?.[base.uClass.id] || 1.0;
+
+    const atkPowerPerTroop = convoy.uClass.atk * convoy.atkMod * classCounter;
+    const defPowerPerTroop = base.uClass.hp * defMods.atk * terrainDef;
+
+    const totalAtk = convoy.count * atkPowerPerTroop;
+    const totalDef = base.pop * defPowerPerTroop;
+
+    base.hitFlash = 1.0;
+    this.spawnParticles(base.x, base.y, '#f97316', 18);
+
+    if (totalAtk > totalDef) {
+      // Base Captured!
+      const remainingAtk = totalAtk - totalDef;
+      const survivors = Math.max(1, Math.round(remainingAtk / atkPowerPerTroop));
+      base.faction = convoy.faction;
+      base.pop = survivors;
+      base.prodProgress = 0;
+      base.pulse = 1.2;
+      sfx.play('capture');
+      this.spawnParticles(base.x, base.y, convoy.faction.light, 26);
+
+      const tag = classCounter > 1.15 ? 'CAPTURED! (Class Adv)' : 'CAPTURED!';
+      this.spawnFloatText(base.x, base.y - 28, tag, convoy.faction.light);
+    } else {
+      // Defense Holds!
+      const remainingDef = totalDef - totalAtk;
+      base.pop = Math.max(1, remainingDef / defPowerPerTroop);
+      sfx.play('hit');
+      const reason = terrainDef > 1.1 ? 'HELD! (Terrain Def)' : (classCounter < 0.9 ? 'HELD! (Countered)' : 'REPELLED!');
+      this.spawnFloatText(base.x, base.y - 28, reason, '#cbd5e1');
+    }
+
+    if (this.selectedBase === base) this.updateInspector(base);
+  }
+
+  fireProjectile(sx, sy, targetConvoy, faction, uClass, power) {
+    this.projectiles.push({
+      sx, sy,
+      tx: targetConvoy.x,
+      ty: targetConvoy.y,
+      target: targetConvoy,
+      color: faction.light,
+      uClass,
+      power,
+      progress: 0,
+      speed: 3.2
+    });
+  }
+
+  spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 25 + Math.random() * 85;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        color,
+        size: 2 + Math.random() * 3.5,
+        life: 0.35 + Math.random() * 0.35
+      });
+    }
+  }
+
+  spawnFloatText(x, y, text, color) {
+    this.floatTexts.push({ x, y, text, color, life: 1.25 });
+  }
+
+  // -------------------- AUTONOMOUS ENEMY AI --------------------
+  runEnemyAI(aiFaction) {
+    const myBases = this.bases.filter(b => b.faction.id === aiFaction.id);
+    if (myBases.length === 0) return;
+
+    for (const src of myBases) {
+      // Reserve minimum garrison unless overflowing
+      if (src.pop < 12) continue;
+
+      // Check incoming threats to src
+      const incomingThreat = this.convoys
+        .filter(c => c.targetBase === src && c.faction.id !== aiFaction.id)
+        .reduce((sum, c) => sum + c.count, 0);
+      if (incomingThreat > src.pop * 0.6) continue; // Hold garrison to defend!
+
+      let bestTarget = null;
+      let bestScore = -Infinity;
+
+      for (const dst of this.bases) {
+        if (dst === src) continue;
+        const path = findHexPath(this.grid, src.q, src.r, dst.q, dst.r, src.uClass.id);
+        if (!path) continue;
+        const dist = path.length;
+
+        if (dst.faction.id === aiFaction.id) {
+          // Reinforce threatened friendly base
+          const friendThreat = this.convoys
+            .filter(c => c.targetBase === dst && c.faction.id !== aiFaction.id)
+            .reduce((sum, c) => sum + c.count, 0);
+          if (friendThreat > dst.pop * 0.5 && dst.pop < dst.uClass.cap * 0.8) {
+            const score = 45 + friendThreat - dist * 4;
+            if (score > bestScore) { bestScore = score; bestTarget = dst; }
+          }
+        } else {
+          // Evaluate offensive capture against Neutral or Player/Rival
+          const counter = CLASS_COUNTER[src.uClass.id]?.[dst.uClass.id] || 1.0;
+          const cell = this.grid.get(hexKey(dst.q, dst.r));
+          const defMult = cell ? cell.terrain.def : 1.0;
+          const effectiveAtk = src.pop * src.uClass.atk * counter;
+          const effectiveDef = (dst.pop + (dst.faction.id === 0 ? 0 : dist * 0.8)) * dst.uClass.hp * defMult;
+
+          if (effectiveAtk > effectiveDef * 1.12 || src.pop >= src.uClass.cap - 2) {
+            let score = (effectiveAtk - effectiveDef) * 1.6 - dist * 5.5;
+            if (dst.faction.id === FACTIONS.NEUTRAL.id) score += 22; // Expand to neutrals early
+            if (dst.uClass.id === 'HELI' || dst.uClass.id === 'ARTILLERY') score += 18; // High-value base
+            if (score > bestScore) { bestScore = score; bestTarget = dst; }
+          }
+        }
+      }
+
+      if (bestTarget && bestScore > 8) {
+        this.deployTroops(src, bestTarget);
+        break; // Issue one coordinated strike per AI tick per faction
+      }
+    }
+  }
+
+  // -------------------- HUD & WIN/LOSS DETECTION --------------------
+  updateHUD() {
+    const mins = String(Math.floor(this.battleTime / 60)).padStart(2, '0');
+    const secs = String(Math.floor(this.battleTime % 60)).padStart(2, '0');
+    document.getElementById('hud-timer').textContent = `${mins}:${secs}`;
+
+    const calcPower = (facId) => {
+      const bPop = this.bases.filter(b => b.faction.id === facId).reduce((s, b) => s + b.pop + 15, 0);
+      const cPop = this.convoys.filter(c => c.faction.id === facId).reduce((s, c) => s + c.count, 0);
+      return bPop + cPop;
+    };
+
+    const pPow = calcPower(FACTIONS.PLAYER.id);
+    const e1Pow = calcPower(FACTIONS.ENEMY1.id);
+    const e2Pow = calcPower(FACTIONS.ENEMY2.id);
+    const tot = Math.max(1, pPow + e1Pow + e2Pow);
+
+    document.getElementById('pb-player').style.width = `${(pPow / tot) * 100}%`;
+    document.getElementById('pb-enemy2').style.width = `${(e2Pow / tot) * 100}%`;
+    document.getElementById('pb-enemy1').style.width = `${(e1Pow / tot) * 100}%`;
+  }
+
+  checkWinLossConditions() {
+    const playerEntities =
+      this.bases.some(b => b.faction.id === FACTIONS.PLAYER.id) ||
+      this.convoys.some(c => c.faction.id === FACTIONS.PLAYER.id);
+
+    const enemyEntities =
+      this.bases.some(b => b.faction.id === FACTIONS.ENEMY1.id || b.faction.id === FACTIONS.ENEMY2.id) ||
+      this.convoys.some(c => c.faction.id === FACTIONS.ENEMY1.id || c.faction.id === FACTIONS.ENEMY2.id);
+
+    if (!playerEntities) {
+      this.finishBattle(false);
+    } else if (!enemyEntities) {
+      this.finishBattle(true);
+    }
+  }
+
+  finishBattle(isVictory) {
+    this.running = false;
+    const modal = document.getElementById('result-modal');
+    const title = document.getElementById('res-title');
+    const sub = document.getElementById('res-subtitle');
+    const starsEl = document.getElementById('res-stars');
+    const statsEl = document.getElementById('res-stats');
+
+    if (isVictory) {
+      const stars = this.battleTime < 65 ? 3 : (this.battleTime < 115 ? 2 : 1);
+      const reward = 85 + this.currentLevel.id * 35 + stars * 25;
+      this.saveSys.data.gold += reward;
+      const prevStars = this.saveSys.data.stars[this.currentLevel.id] || 0;
+      this.saveSys.data.stars[this.currentLevel.id] = Math.max(prevStars, stars);
+      if (this.currentLevel.id >= this.saveSys.data.unlockedLevel && this.currentLevel.id < CAMPAIGN_LEVELS.length) {
+        this.saveSys.data.unlockedLevel = this.currentLevel.id + 1;
+      }
+      this.saveSys.save();
+
+      title.textContent = 'SECTOR CONQUERED';
+      title.style.color = '#38bdf8';
+      sub.textContent = `${this.currentLevel.name} Secured`;
+      starsEl.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      statsEl.innerHTML = `
+        <div>Completion Time: <b>${Math.floor(this.battleTime)}s</b></div>
+        <div>Bases Controlled: <b>${this.bases.filter(b => b.faction.id === FACTIONS.PLAYER.id).length} / ${this.bases.length}</b></div>
+        <div style="color:#facc15; margin-top:4px;">War Chest Reward: <b>+${reward} Credits</b></div>
+      `;
+    } else {
+      this.saveSys.data.gold += 25;
+      this.saveSys.save();
+      title.textContent = 'WARFRONT LOST';
+      title.style.color = '#f87171';
+      sub.textContent = 'All Vanguard forces were eliminated';
+      starsEl.textContent = '☆☆☆';
+      statsEl.innerHTML = `
+        <div>Survival Time: <b>${Math.floor(this.battleTime)}s</b></div>
+        <div style="color:#facc15; margin-top:4px;">Consolation Salvage: <b>+25 Credits</b></div>
+      `;
+    }
+    modal.classList.remove('hidden');
+  }
+
+  // -------------------- VISUAL RENDERING --------------------
+  loop(now) {
+    const dt = (now - this.lastFrame) / 1000;
+    this.lastFrame = now;
+    this.update(dt);
+    this.render(now / 1000);
+    requestAnimationFrame((t) => this.loop(t));
+  }
+
+  drawHexPath(cx, cy, radius) {
+    this.ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 180) * (60 * i - 30);
+      const vx = cx + radius * Math.cos(ang);
+      const vy = cy + radius * Math.sin(ang) * 0.86;
+      if (i === 0) this.ctx.moveTo(vx, vy);
+      else this.ctx.lineTo(vx, vy);
+    }
+    this.ctx.closePath();
+  }
+
+  render(timeSec) {
+    const ctx = this.ctx;
+    const W = this.canvas.width;
+    const H = this.canvas.height;
+
+    // Deep Tactical Ocean Background
+    const grad = ctx.createRadialGradient(W * 0.5, H * 0.45, 50, W * 0.5, H * 0.5, Math.max(W, H) * 0.75);
+    grad.addColorStop(0, '#13314c');
+    grad.addColorStop(1, '#071320');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.save();
+    ctx.translate(W / 2 + this.cam.x, H / 2 + this.cam.y);
+    ctx.scale(this.cam.zoom, this.cam.zoom);
+
+    // Ambient Water Ripples
+    ctx.strokeStyle = 'rgba(125, 211, 252, 0.08)';
+    ctx.lineWidth = 1.5;
+    for (const rp of this.waterRipples) {
+      const rad = rp.r + Math.sin(timeSec * 1.5 + rp.phase) * 5;
+      ctx.beginPath();
+      ctx.ellipse(rp.x, rp.y, rad, rad * 0.75, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Sort hex cells back-to-front by Y for clean 2.5D depth
+    const sortedCells = Array.from(this.grid.values()).sort((a, b) => a.y - b.y);
+
+    // 1. Render Hexagonal Terrain Tiles
+    for (const cell of sortedCells) {
+      const t = cell.terrain;
+      const isWater = (t === TERRAIN.WATER);
+      const elev = isWater ? 0 : (t === TERRAIN.MOUNTAIN ? 10 : 6);
+
+      // 3D Extruded Cliff Side
+      if (!isWater) {
+        this.drawHexPath(cell.x, cell.y + elev, 33.5);
+        ctx.fillStyle = t.side;
+        ctx.fill();
+      }
+
+      // Top Hex Surface
+      this.drawHexPath(cell.x, cell.y, isWater ? 33 : 33.5);
+      ctx.fillStyle = t.top;
+      ctx.fill();
+      ctx.strokeStyle = isWater ? 'rgba(56, 189, 248, 0.09)' : 'rgba(15, 23, 42, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Faction Territory Influence Tint
+      if (cell.base && cell.base.faction.id !== FACTIONS.NEUTRAL.id) {
+        this.drawHexPath(cell.x, cell.y, 31);
+        ctx.strokeStyle = cell.base.faction.light;
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+      }
+
+      // Terrain Props (Bridges, Trees, Mountains, Reefs)
+      this.renderTerrainDetails(cell);
+    }
+
+    // 2. Render Drag Route Preview & Range Ring
+    if (this.dragSourceBase) {
+      const src = this.dragSourceBase;
+      if (src.uClass.fireRange > 0) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(src.x, src.y, src.uClass.fireRange * 60, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(96, 165, 250, 0.35)';
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (this.previewPath && this.previewPath.length >= 2) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(this.previewPath[0].x, this.previewPath[0].y);
+        for (let i = 1; i < this.previewPath.length; i++) {
+          ctx.lineTo(this.previewPath[i].x, this.previewPath[i].y);
+        }
+        const isFriendly = this.dragHoverBase && this.dragHoverBase.faction.id === src.faction.id;
+        ctx.strokeStyle = isFriendly ? '#4ade80' : '#38bdf8';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.setLineDash([10, 8]);
+        ctx.lineDashOffset = -timeSec * 38;
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // Rubberband line to finger/cursor
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(src.x, src.y);
+        ctx.lineTo(this.dragWorldPos.x, this.dragWorldPos.y);
+        ctx.strokeStyle = this.dragHoverBase ? 'rgba(248, 113, 113, 0.75)' : 'rgba(148, 163, 184, 0.5)';
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 3. Render Military Bases
+    for (const b of this.bases) {
+      this.renderBase(b, timeSec);
+    }
+
+    // 4. Render Active Troop Convoys
+    for (const c of this.convoys) {
+      this.renderConvoy(c, timeSec);
+    }
+
+    // 5. Render Projectiles
+    for (const p of this.projectiles) {
+      const px = p.sx + (p.tx - p.sx) * p.progress;
+      const py = p.sy + (p.ty - p.sy) * p.progress - Math.sin(p.progress * Math.PI) * 28;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 6. Render Explosions & Floating Combat Numbers
+    for (const pt of this.particles) {
+      ctx.fillStyle = pt.color;
+      ctx.globalAlpha = Math.max(0, pt.life * 2);
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    for (const ft of this.floatTexts) {
+      ctx.save();
+      ctx.font = '800 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#000';
+      ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  renderTerrainDetails(cell) {
+    const ctx = this.ctx;
+    const { x, y, terrain, base, decorSeed } = cell;
+    if (base) return;
+
+    if (terrain === TERRAIN.FOREST) {
+      const offsets = [[-9, -5], [8, -4], [-2, 6]];
+      for (const [ox, oy] of offsets) {
+        ctx.fillStyle = '#143321';
+        ctx.beginPath();
+        ctx.arc(x + ox, y + oy + 2, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#2e6f40';
+        ctx.beginPath();
+        ctx.arc(x + ox, y + oy, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (terrain === TERRAIN.MOUNTAIN) {
+      ctx.fillStyle = '#333942';
+      ctx.beginPath();
+      ctx.moveTo(x - 16, y + 8);
+      ctx.lineTo(x - 2, y - 15);
+      ctx.lineTo(x + 15, y + 8);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y - 15);
+      ctx.lineTo(x - 7, y - 5);
+      ctx.lineTo(x + 4, y - 5);
+      ctx.closePath();
+      ctx.fill();
+    } else if (terrain === TERRAIN.BRIDGE) {
+      ctx.fillStyle = '#473621';
+      ctx.fillRect(x - 16, y - 11, 32, 22);
+      ctx.fillStyle = '#a47e4f';
+      for (let i = -12; i <= 12; i += 6) {
+        ctx.fillRect(x + i - 2, y - 9, 4, 18);
+      }
+    } else if (terrain === TERRAIN.PLAINS && decorSeed > 0.72) {
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.beginPath();
+      ctx.arc(x + 4, y - 2, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  renderBase(b, timeSec) {
+    const ctx = this.ctx;
+    const scale = 1 + b.pulse * 0.18;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.scale(scale, scale);
+
+    // Selection or Hover Halo
+    if (this.selectedBase === b || this.dragHoverBase === b) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 26, 0, Math.PI * 2);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
+    // Base Shadow & Armored Pad
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.arc(0, 3, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = b.hitFlash > 0 ? '#ffffff' : b.faction.dark;
+    ctx.beginPath();
+    ctx.arc(0, 0, 19, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Production Progress Ring
+    if (b.faction.id !== FACTIONS.NEUTRAL.id) {
+      ctx.beginPath();
+      ctx.arc(0, 0, 19, -Math.PI / 2, -Math.PI / 2 + b.prodProgress * Math.PI * 2);
+      ctx.strokeStyle = b.faction.light;
+      ctx.lineWidth = 3.2;
+      ctx.stroke();
+    }
+
+    // Inner Faction Core
+    ctx.fillStyle = b.faction.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, 14.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Unit Class Silhouette Icon inside Base
+    this.drawUnitEmblem(ctx, b.uClass.id, 0, 0, timeSec);
+
+    // Overhead Population Pill (War Regions Style)
+    const popStr = String(Math.floor(b.pop));
+    ctx.fillStyle = 'rgba(9, 19, 28, 0.92)';
+    ctx.strokeStyle = b.faction.light;
+    ctx.lineWidth = 1.5;
+    const pillW = 30;
+    const pillH = 17;
+    ctx.beginPath();
+    ctx.roundRect(-pillW / 2, -33, pillW, pillH, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(popStr, 0, -24.5);
+
+    ctx.restore();
+  }
+
+  drawUnitEmblem(ctx, classId, x, y, timeSec) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#ffffff';
+
+    if (classId === 'INFANTRY') {
+      // Tactical Star / Riflemen Chevron
+      ctx.beginPath();
+      ctx.moveTo(0, -7);
+      ctx.lineTo(6, 4);
+      ctx.lineTo(0, 1);
+      ctx.lineTo(-6, 4);
+      ctx.closePath();
+      ctx.fill();
+    } else if (classId === 'TANK') {
+      // Heavy Tank Hull + Turret
+      ctx.fillRect(-6, -4, 12, 8);
+      ctx.fillRect(0, -1.5, 9, 3);
+    } else if (classId === 'ARTILLERY') {
+      // Dual Rocket Tubes + Crosshair
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, 5.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillRect(-1, -8, 2, 16);
+      ctx.fillRect(-8, -1, 16, 2);
+    } else if (classId === 'HELI') {
+      // Gunship Body + Spinning Rotor
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.rotate(timeSec * 12);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-8, 0); ctx.lineTo(8, 0);
+      ctx.moveTo(0, -8); ctx.lineTo(0, 8);
+      ctx.stroke();
+      ctx.restore();
+    } else if (classId === 'GUNBOAT') {
+      // Naval Hull
+      ctx.beginPath();
+      ctx.moveTo(-7, -3);
+      ctx.lineTo(8, 0);
+      ctx.lineTo(-7, 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  renderConvoy(c, timeSec) {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.translate(c.x, c.y);
+
+    // Shadow (offset further for airborne helicopters)
+    const isAir = c.uClass.domain === 'AIR';
+    const shadowY = isAir ? 12 : 4;
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.arc(0, shadowY, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Unit Body
+    ctx.save();
+    ctx.rotate(c.angle);
+    ctx.fillStyle = c.faction.color;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    this.drawUnitEmblem(ctx, c.uClass.id, 0, 0, timeSec);
+    ctx.restore();
+
+    // Readable Troop Count Badge
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(-12, -23, 24, 14, 4);
+    ctx.fill();
+    ctx.fillStyle = c.faction.light;
+    ctx.font = '800 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(c.count), 0, -16);
+
+    ctx.restore();
+  }
+
+  // -------------------- TOUCH & MOUSE INPUT SYSTEM --------------------
+  screenToWorld(sx, sy) {
+    const rect = this.canvas.getBoundingClientRect();
+    const cx = sx - rect.left - this.canvas.width / 2 - this.cam.x;
+    const cy = sy - rect.top - this.canvas.height / 2 - this.cam.y;
+    return { x: cx / this.cam.zoom, y: cy / this.cam.zoom };
+  }
+
+  getBaseAtWorld(wx, wy) {
+    for (const b of this.bases) {
+      if (Math.hypot(wx - b.x, wy - b.y) <= 28) return b;
+    }
+    return null;
+  }
+
+  updateInspector(base) {
+    const title = document.getElementById('insp-title');
+    const sub = document.getElementById('insp-sub');
+    const body = document.getElementById('insp-body');
+    if (!base) {
+      title.textContent = 'TACTICAL DATALINK';
+      sub.textContent = 'DRAG TO DEPLOY';
+      body.innerHTML = 'Drag from any <b>Blue Base</b> to a target base to deploy troops. Tap any base to inspect unit specs.';
+      return;
+    }
+    title.textContent = `${base.uClass.name.toUpperCase()} (${base.faction.name})`;
+    sub.textContent = `POP: ${Math.floor(base.pop)} / ${base.uClass.cap}`;
+    body.innerHTML = `${base.uClass.desc} <br><span style="color:#38bdf8">Domain: ${base.uClass.domain} | Prod: ${base.uClass.prodRate}/s</span>`;
+  }
+
+  handlePointerDown(clientX, clientY) {
+    sfx.init();
+    const wPos = this.screenToWorld(clientX, clientY);
+    const hitBase = this.getBaseAtWorld(wPos.x, wPos.y);
+
+    if (hitBase) {
+      this.selectedBase = hitBase;
+      this.updateInspector(hitBase);
+      if (hitBase.faction.id === FACTIONS.PLAYER.id) {
+        this.dragSourceBase = hitBase;
+        this.dragWorldPos = wPos;
+        this.dragHoverBase = null;
+        this.previewPath = null;
+        return;
+      }
+    } else {
+      this.selectedBase = null;
+      this.updateInspector(null);
+    }
+
+    // Start Camera Panning
+    this.isPanning = true;
+    this.panStart = { x: clientX, y: clientY, camX: this.cam.x, camY: this.cam.y };
+  }
+
+  handlePointerMove(clientX, clientY) {
+    const wPos = this.screenToWorld(clientX, clientY);
+    if (this.dragSourceBase) {
+      this.dragWorldPos = wPos;
+      const hover = this.getBaseAtWorld(wPos.x, wPos.y);
+      if (hover && hover !== this.dragSourceBase) {
+        if (this.dragHoverBase !== hover) {
+          this.dragHoverBase = hover;
+          this.previewPath = findHexPath(
+            this.grid,
+            this.dragSourceBase.q,
+            this.dragSourceBase.r,
+            hover.q,
+            hover.r,
+            this.dragSourceBase.uClass.id
+          );
+        }
+      } else {
+        this.dragHoverBase = null;
+        this.previewPath = null;
+      }
+      return;
+    }
+
+    if (this.isPanning) {
+      this.cam.x = Math.max(-350, Math.min(350, this.panStart.camX + (clientX - this.panStart.x)));
+      this.cam.y = Math.max(-350, Math.min(350, this.panStart.camY + (clientY - this.panStart.y)));
+    }
+  }
+
+  handlePointerUp() {
+    if (this.dragSourceBase && this.dragHoverBase) {
+      this.deployTroops(this.dragSourceBase, this.dragHoverBase);
+    }
+    this.dragSourceBase = null;
+    this.dragHoverBase = null;
+    this.previewPath = null;
+    this.isPanning = false;
+  }
+
+  bindEvents() {
+    window.addEventListener('resize', () => this.resize());
+
+    // Mouse Controls
+    this.canvas.addEventListener('mousedown', (e) => this.handlePointerDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', (e) => this.handlePointerMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', () => this.handlePointerUp());
+    this.canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.12 : -0.12;
+      this.cam.targetZoom = Math.max(0.55, Math.min(1.65, this.cam.targetZoom + delta));
+    }, { passive: false });
+
+    // Touch Controls (Single-finger drag/pan + Two-finger pinch zoom)
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        this.handlePointerDown(e.touches[0].clientX, e.touches[0].clientY);
+      } else if (e.touches.length === 2) {
+        this.dragSourceBase = null;
+        this.isPanning = false;
+        this.pinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        this.handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      } else if (e.touches.length === 2 && this.pinchDist > 0) {
+        const newDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const factor = (newDist - this.pinchDist) * 0.004;
+        this.cam.targetZoom = Math.max(0.55, Math.min(1.65, this.cam.targetZoom + factor));
+        this.pinchDist = newDist;
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.handlePointerUp();
+    }, { passive: false });
+
+    // HUD & Modal Buttons
+    document.getElementById('btn-speed').addEventListener('click', (e) => {
+      this.gameSpeed = this.gameSpeed === 1 ? 2 : 1;
+      e.target.textContent = `${this.gameSpeed}x`;
+    });
+    document.getElementById('btn-restart').addEventListener('click', () => this.loadLevel(this.currentLevel));
+    document.getElementById('btn-menu').addEventListener('click', () => {
+      this.running = false;
+      this.renderMenuUI();
+      document.getElementById('menu-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      this.cam.targetZoom = Math.min(1.65, this.cam.targetZoom + 0.18);
+    });
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      this.cam.targetZoom = Math.max(0.55, this.cam.targetZoom - 0.18);
+    });
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => this.fitCamera());
+
+    document.getElementById('btn-res-retry').addEventListener('click', () => this.loadLevel(this.currentLevel));
+    document.getElementById('btn-res-hq').addEventListener('click', () => {
+      document.getElementById('result-modal').classList.add('hidden');
+      this.renderMenuUI();
+      document.getElementById('menu-modal').classList.remove('hidden');
+    });
+
+    document.getElementById('btn-reset-save').addEventListener('click', () => {
+      this.saveSys.reset();
+      this.renderMenuUI();
+    });
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.saveSys.data.difficulty = Number(btn.dataset.diff);
+        this.saveSys.save();
+        this.renderMenuUI();
+      });
+    });
+  }
+
+  resize() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  // -------------------- CAMPAIGN & UPGRADE MENU UI --------------------
+  renderMenuUI() {
+    document.getElementById('menu-gold').textContent = this.saveSys.data.gold;
+
+    document.querySelectorAll('.diff-btn').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.diff) === this.saveSys.data.difficulty);
+    });
+
+    const campList = document.getElementById('campaign-list');
+    campList.innerHTML = '';
+    for (const lvl of CAMPAIGN_LEVELS) {
+      const unlocked = lvl.id <= this.saveSys.data.unlockedLevel;
+      const earnedStars = this.saveSys.data.stars[lvl.id] || 0;
+      const starStr = '★'.repeat(earnedStars) + '☆'.repeat(3 - earnedStars);
+
+      const item = document.createElement('div');
+      item.className = `level-item ${unlocked ? 'unlocked' : 'locked'}`;
+      item.innerHTML = `
+        <div class="lvl-info">
+          <h4>${lvl.name}</h4>
+          <p>${lvl.subtitle}</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="stars-row">${starStr}</span>
+          ${unlocked
+            ? `<button class="btn-primary" data-lvl="${lvl.id}">DEPLOY</button>`
+            : `<span style="font-size:11px; color:#64748b; font-weight:700;">LOCKED</span>`}
+        </div>
+      `;
+      if (unlocked) {
+        item.querySelector('button').addEventListener('click', () => this.loadLevel(lvl));
+      }
+      campList.appendChild(item);
+    }
+
+    const upgGrid = document.getElementById('upgrade-grid');
+    upgGrid.innerHTML = '';
+    for (const uDef of UPGRADE_DEFS) {
+      const curTier = this.saveSys.data.upgrades[uDef.key] || 0;
+      const cost = uDef.baseCost + curTier * 75;
+      const canAfford = this.saveSys.data.gold >= cost && curTier < 5;
+
+      const card = document.createElement('div');
+      card.className = 'upg-card';
+      card.innerHTML = `
+        <div>
+          <h5>${uDef.name} <span style="color:#facc15">(Lv.${curTier}/5)</span></h5>
+          <p>${uDef.desc}</p>
+        </div>
+        <button class="btn-upg" ${!canAfford ? 'disabled' : ''}>
+          ${curTier >= 5 ? 'MAXED' : `UPGRADE (★ ${cost})`}
+        </button>
+      `;
+      if (canAfford) {
+        card.querySelector('button').addEventListener('click', () => {
+          this.saveSys.data.gold -= cost;
+          this.saveSys.data.upgrades[uDef.key] = curTier + 1;
+          this.saveSys.save();
+          sfx.init();
+          sfx.play('capture');
+          this.renderMenuUI();
+        });
+      }
+      upgGrid.appendChild(card);
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.argonGame = new ArgonWarfrontGame();
+});
+</script>
+</body>
+</html>
